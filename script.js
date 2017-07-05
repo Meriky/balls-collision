@@ -24,7 +24,10 @@ const getDistance = (ballA, ballB) => {
 };
 
 const collisionCheckingAndExchangevelocity = (ballA, ballB) => {
-  if (getDistance(ballA, ballB) <= ballA.radius + ballB.radius) {
+  let distance = getDistance(ballA, ballB);
+  if (distance <= ballA.radius + ballB.radius && (!ballA.stick[ballB.serial] || !ballB.stick[ballA.serial])) {
+    ballA.stick[ballB.serial] = true;
+    ballB.stick[ballA.serial] = true;
     let dx = ballA.left - ballB.left;
     let dy = ballA.top - ballB.top;
 
@@ -49,8 +52,11 @@ const collisionCheckingAndExchangevelocity = (ballA, ballB) => {
     ballA.velocityX = Math.cos(collisionDirection) * updatedVXA + Math.cos(collisionDirection + Math.PI / 2) * updatedVYA;
     ballA.velocityY = Math.sin(collisionDirection) * updatedVXA + Math.sin(collisionDirection + Math.PI / 2) * updatedVYA;
     ballB.velocityX = Math.cos(collisionDirection) * updatedVXB + Math.cos(collisionDirection + Math.PI / 2) * updatedVYB;
-    ballA.velocityY = Math.sin(collisionDirection) * updatedVXB + Math.sin(collisionDirection + Math.PI / 2) * updatedVYB;
+    ballB.velocityY = Math.sin(collisionDirection) * updatedVXB + Math.sin(collisionDirection + Math.PI / 2) * updatedVYB;
     /* eslint-enable */
+  } else {
+    ballA.stick[ballB.serial] = false;
+    ballB.stick[ballA.serial] = false;
   }
 
 };
@@ -80,6 +86,7 @@ class Ball {
     this.top = 0;
     this.position = [this.left + this.radius, this.top + this.radius];
     this.serial = GLOBAL.ballNum++;
+    this.stick = [];
     this.newBall();
   }
 
