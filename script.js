@@ -2,10 +2,10 @@ let GLOBAL = {
   ballNum: 0,
   colorArray: ['#c00', 'blue', 'yellow', 'green', 'black'],
   ballArray: [],
-  fps: 24,
+  fps: 60,
   containerWidth: 800,
   containerHeight: 500,
-  overlapSpeed: 50,
+  overlapvelocity: 50,
   intervalEngine: () => {}
 };
 
@@ -23,21 +23,34 @@ const getDistance = (ballA, ballB) => {
     ));
 };
 
-const collisionCheckingAndExchangeSpeed = (ballA, ballB) => {
+const collisionCheckingAndExchangevelocity = (ballA, ballB) => {
   if (getDistance(ballA, ballB) <= ballA.radius + ballB.radius) {
-    let mA = ballA.mass,
-      mB = ballB.mass;
-    let vxA = ballA.speedX,
-      vxB = ballB.speedX;
-    let vyA = ballA.speedY,
-      vyB = ballB.speedY;
+    let dx = ballA.left - ballB.left;
+    let dy = ballA.top - ballB.top;
 
-    // x, y分量上都满足动量守恒，由速度交换公式有：
-    ballA.speedX = ((mA - mB) / (mA + mB)) * vxA + (2 * mB / (mA + mB)) * vxB;
-    ballB.speedX = ((mB - mA) / (mA + mB)) * vxB + (2 * mA / (mA + mB)) * vxA;
-
-    ballA.speedY = ((mA - mB) / (mA + mB)) * vyA + (2 * mB / (mA + mB)) * vyB;
-    ballB.speedY = ((mB - mA) / (mA + mB)) * vyB + (2 * mA / (mA + mB)) * vyA;
+    /* eslint-disable */
+    let vxA = ballA.velocityX,
+      vxB = ballB.velocityX,
+      vyA = ballA.velocityY,
+      vyB = ballB.velocityY;
+    let collisionDirection = Math.atan2(dy, dx);
+    let velocityMagA = Math.sqrt(vxA * vxA + vyA * vyA);
+    let velocityMagB = Math.sqrt(vxB * vxB + vyB * vyB);
+    let velocityDirectionA = Math.atan2(vyA, vxA);
+    let velocityDirectionB = Math.atan2(vyB, vxB);
+    let newVXA = velocityMagA * Math.cos(velocityDirectionA - collisionDirection);
+    let newVYA = velocityMagA * Math.sin(velocityDirectionA - collisionDirection);
+    let newVXB = velocityMagB * Math.cos(velocityDirectionB - collisionDirection);
+    let newVYB = velocityMagB * Math.sin(velocityDirectionB - collisionDirection);
+    let updatedVXA = ((ballA.mass - ballB.mass) * newVXA + (ballB.mass + ballB.mass) * newVXB) / (ballA.mass + ballB.mass);
+    let updatedVXB = (2 * ballA.mass * newVXA + (ballB.mass - ballA.mass) * newVXB) / (ballA.mass + ballB.mass);
+    let updatedVYA = newVYA;
+    let updatedVYB = newVYB;
+    ballA.velocityX = Math.cos(collisionDirection) * updatedVXA + Math.cos(collisionDirection + Math.PI / 2) * updatedVYA;
+    ballA.velocityY = Math.sin(collisionDirection) * updatedVXA + Math.sin(collisionDirection + Math.PI / 2) * updatedVYA;
+    ballB.velocityX = Math.cos(collisionDirection) * updatedVXB + Math.cos(collisionDirection + Math.PI / 2) * updatedVYB;
+    ballA.velocityY = Math.sin(collisionDirection) * updatedVXB + Math.sin(collisionDirection + Math.PI / 2) * updatedVYB;
+    /* eslint-enable */
   }
 
 };
@@ -49,7 +62,7 @@ GLOBAL.interval = setInterval(() => {
   array.forEach((item, index) => {
     item.move();
     for (let i = index + 1; i < array.length; i++) {
-      collisionCheckingAndExchangeSpeed(item, array[i]);
+      collisionCheckingAndExchangevelocity(item, array[i]);
     }
   });
 
@@ -58,9 +71,9 @@ GLOBAL.interval = setInterval(() => {
 /* Ball Class */
 
 class Ball {
-  constructor(speedX, speedY, radius, mass) {
-    this.speedX = speedX;
-    this.speedY = speedY;
+  constructor(velocityX, velocityY, radius, mass) {
+    this.velocityX = velocityX;
+    this.velocityY = velocityY;
     this.mass = mass || 100;
     this.radius = radius || 50;
     this.left = GLOBAL.containerWidth / 2 - this.radius;
@@ -87,8 +100,8 @@ class Ball {
 
   // 移动一次，碰到上下边墙先修正位置，垂直方向速度再乘以-1，左右类似
   move() {
-    this.left += this.speedX / Math.ceil(1000 / GLOBAL.fps);
-    this.top += this.speedY / Math.ceil(1000 / GLOBAL.fps);
+    this.left += this.velocityX / (1000 / GLOBAL.fps);
+    this.top += this.velocityY / (1000 / GLOBAL.fps);
 
     let leftMin = 0,
       leftMax = GLOBAL.containerWidth - 2 * this.radius,
@@ -97,18 +110,18 @@ class Ball {
 
     if ( this.left <= leftMin ) {
       this.left = leftMin;
-      this.speedX = -this.speedX;
+      this.velocityX = -this.velocityX;
     } else if ( this.left >= leftMax ) {
       this.left = leftMax;
-      this.speedX = -this.speedX;
+      this.velocityX = -this.velocityX;
     }
 
     if ( this.top <= topMin ) {
       this.top = topMin;
-      this.speedY = -this.speedY;
+      this.velocityY = -this.velocityY;
     } else if ( this.top >= topMax ) {
       this.top = topMax;
-      this.speedY = -this.speedY;
+      this.velocityY = -this.velocityY;
     }
 
     this.element.style.left = this.left + 'px';
@@ -122,10 +135,16 @@ window.onload = function() {
   wrapper.style.width = GLOBAL.containerWidth + 'px';
   wrapper.style.height = GLOBAL.containerHeight + 'px';
   getElement('bt-add').addEventListener('click', (e) => {
-    GLOBAL.ballArray.push(new Ball(50, 50, 50, 100));
+    GLOBAL.ballArray.push(new Ball((Math.random() - 0.5) * 200, Math.random() * 100, 50, 100));
   });
   getElement('bt-stop').addEventListener('click', (e) => {
     clearInterval(GLOBAL.intervalEngine);
-    GLOBAL.ballArray.forEach((item) => { item.speedX = 0; item.speedY = 0 });
+    GLOBAL.ballArray.forEach((item) => { item.velocityX = 0; item.velocityY = 0 });
+  });
+  getElement('bt-clear').addEventListener('click', (e) => {
+    clearInterval(GLOBAL.intervalEngine);
+    GLOBAL.ballArray = [];
+    GLOBAL.ballNum = 0;
+    wrapper.innerHTML = '';
   });
 };
