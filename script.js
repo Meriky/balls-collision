@@ -3,9 +3,9 @@ let GLOBAL = {
   colorArray: ['#c00', 'blue', 'yellow', 'green', 'black'],
   ballArray: [],
   fps: 60,
+  radius: 50,
   containerWidth: 800,
   containerHeight: 500,
-  overlapvelocity: 50,
   intervalEngine: () => {}
 };
 
@@ -25,13 +25,13 @@ const getDistance = (ballA, ballB) => {
 
 const collisionCheckingAndExchangevelocity = (ballA, ballB) => {
   let distance = getDistance(ballA, ballB);
+  /* eslint-disable */
   if (distance <= ballA.radius + ballB.radius && (!ballA.stick[ballB.serial] || !ballB.stick[ballA.serial])) {
     ballA.stick[ballB.serial] = true;
     ballB.stick[ballA.serial] = true;
     let dx = ballA.left - ballB.left;
     let dy = ballA.top - ballB.top;
 
-    /* eslint-disable */
     let vxA = ballA.velocityX,
       vxB = ballB.velocityX,
       vyA = ballA.velocityY,
@@ -77,13 +77,13 @@ GLOBAL.interval = setInterval(() => {
 /* Ball Class */
 
 class Ball {
-  constructor(velocityX, velocityY, radius, mass) {
-    this.velocityX = velocityX;
-    this.velocityY = velocityY;
+  constructor(velocityX, velocityY, left, top, radius, mass) {
+    this.velocityX = velocityX || 0;
+    this.velocityY = velocityY || 0;
     this.mass = mass || 100;
     this.radius = radius || 50;
-    this.left = GLOBAL.containerWidth / 2 - this.radius;
-    this.top = 0;
+    this.left = left || (GLOBAL.containerWidth / 2 - this.radius);
+    this.top = top || 0;
     this.position = [this.left + this.radius, this.top + this.radius];
     this.serial = GLOBAL.ballNum++;
     this.stick = [];
@@ -142,7 +142,26 @@ window.onload = function() {
   wrapper.style.width = GLOBAL.containerWidth + 'px';
   wrapper.style.height = GLOBAL.containerHeight + 'px';
   getElement('bt-add').addEventListener('click', (e) => {
-    GLOBAL.ballArray.push(new Ball((Math.random() - 0.5) * 200, Math.random() * 100, 50, 100));
+    let position = {
+      left: 0,
+      top: 0
+    };
+
+    while (1) {
+      const radius = GLOBAL.radius;
+      const length = GLOBAL.ballArray.length;
+      let flag = true;
+      position.left = Math.floor(Math.random() * (GLOBAL.containerWidth - 2 * radius)) + radius;
+      position.top = Math.floor(Math.random() * (GLOBAL.containerHeight - 2 * radius)) + radius;
+      for (let i = 0; i < length; i++) {
+        if (getDistance(GLOBAL.ballArray[i], position) < 2 * radius) {
+          flag = false;
+          break;
+        }
+      }
+      if (flag === true) break;
+    }
+    GLOBAL.ballArray.push(new Ball((Math.random() - 0.5) * 200, (Math.random() - 0.5) * 100, position.left, position.top, 50, 100));
   });
   getElement('bt-stop').addEventListener('click', (e) => {
     clearInterval(GLOBAL.intervalEngine);
